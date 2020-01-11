@@ -1,0 +1,27 @@
+name: Docker Image CI
+
+on: [push]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v1
+      - name: Build image
+        env:
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        run: |
+          echo "<settings><servers><server><id>github-twitch-data-feed-events</id><username>DataCollectApp</username><password>${ACCESS_TOKEN}</password></server><server><id>github-time</id><username>DataCollectApp</username><password>${ACCESS_TOKEN}</password></server></servers></settings>" > settings.xml
+          docker build --tag twitch-socket-adapter:latest .
+      - name: Deploy to Github Package Registry
+        env:
+          DOCKER_REGISTRY_URL: docker.pkg.github.com
+          DOCKER_USERNAME: DataCollectApp
+          DOCKER_PASSWORD: ${{ secrets.ACCESS_TOKEN }}
+        run: |
+          echo "$DOCKER_PASSWORD" | docker login "$DOCKER_REGISTRY_URL" -u "$DOCKER_USERNAME" --password-stdin
+          docker tag twitch-socket-adapter:latest docker.pkg.github.com/datacollectapp/twitch-socket-adapter/twitch-socket-adapter:latest
+          docker push docker.pkg.github.com/datacollectapp/twitch-socket-adapter/twitch-socket-adapter:latest
